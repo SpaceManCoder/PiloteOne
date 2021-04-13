@@ -1,0 +1,1063 @@
+/**
+ *  Controle Piscine V2
+ *
+ZUNO channels
+ZUNO_SETUP_CHANNELS(
+  ZUNO_SWITCH_BINARY(getterSwitch1, setterSwitch1),
+  ZUNO_SWITCH_BINARY(getterSwitch2, setterSwitch2),
+  ZUNO_SWITCH_BINARY(getterSwitch3, setterSwitch3),
+  ZUNO_SWITCH_BINARY(getterSwitch4, setterSwitch4)
+  ZUNO_SWITCH_BINARY(getterSwitch5, setterSwitch5),
+  ZUNO_SWITCH_BINARY(getterSwitch6, setterSwitch6),
+  ZUNO_SWITCH_BINARY(getterSwitch7, setterSwitch7),
+  ZUNO_SWITCH_BINARY(getterSwitch8, setterSwitch8)
+);
+*/
+/**
+*  Zooz MultiRelay v1.3.1
+ *  (Models: ZEN16)
+ *
+ *  Author:
+ *    Kevin LaFramboise (krlaframboise)
+ *
+ *	Documentation: https://community.smartthings.com/t/release-zooz-multirelay-zen16/181057
+ *
+ *  Copyright 2020 Kevin LaFramboise (@krlaframboise)
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *  
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *  
+ *  2021-04-01 Version of code adapted for Zuno 8 relays application (SpaceManCoder)     
+ *
+*/
+import groovy.transform.Field
+
+@Field static Map commandClassVersions = [
+	0x20: 1,	// Basic
+	0x25: 1,	// Switch Binary
+	0x55: 1,	// Transport Service
+	0x59: 1,	// AssociationGrpInfo
+	0x5A: 1,	// DeviceResetLocally
+	0x5E: 2,	// ZwaveplusInfo
+	0x60: 3,	// Multi Channel
+	0x6C: 1,	// Supervision
+	0x70: 2,	// Configuration
+	0x72: 2,	// ManufacturerSpecific
+	0x73: 1,	// Powerlevel
+	0x7A: 2,	// Firmware Update Md
+	0x85: 2,	// Association
+	0x86: 1,	// Version
+	0x8E: 2,	// Multi Channel Association
+	0x98: 1,	// Security 0
+	0x9F: 1		// Security 2
+]
+// 
+metadata {
+	definition (
+		name: "Controle Piscine V2",
+		namespace: "SpaceManCoder",
+		author: "SpaceManCoder",
+//		author: "Kevin LaFramboise",
+		ocfDeviceType: "oic.d.switch",
+		vid:"generic-switch"
+	) {
+		capability "Actuator"
+		capability "Switch"
+//		capability "Outlet"
+		capability "Light"
+		capability "Configuration"
+		capability "Refresh"
+		capability "Health Check"
+		capability "Zw Multichannel"    // needed ?
+        
+//       projected capability "Temperature Measurement"
+
+		attribute "firmwareVersion", "string"
+		attribute "lastCheckIn", "string"
+
+		(1..8).each {
+			attribute "relay${it}Switch", "string"
+			attribute "relay${it}Name", "string"
+
+			command "relay${it}On"
+			command "relay${it}Off"
+		}
+
+		fingerprint mfr: "0658", prod: "0110", model: "0001", deviceJoinName: "Z-Uno MultiRelay"
+	}
+
+	simulator { }
+    
+// Displayed Tiles presentation
+	tiles(scale: 2) {
+		multiAttributeTile(name:"switch", type: "generic", width: 6, height: 4){
+			tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
+				attributeState "on", label: '${name}', action: "switch.off", icon: "st.switches.switch.on", backgroundColor: "#00a0dc"
+				attributeState "off", label: '${name}', action: "switch.on", icon: "st.switches.switch.off", backgroundColor: "#ffffff"
+			}
+		}
+
+		standardTile("refresh", "device.refresh", width: 2, height: 2) {
+			state "default", label:'Refresh', action: "refresh", icon:"st.secondary.refresh-icon"
+		}
+		standardTile("configure", "device.configure", width: 2, height: 2) {
+			state "default", label:'Sync', action: "configure", icon:"st.secondary.tools"
+		}
+		valueTile("firmwareVersion", "device.firmwareVersion", decoration:"flat", width:3, height: 1) {
+			state "firmwareVersion", label:'Firmware ${currentValue}'
+		}
+		valueTile("syncStatus", "device.syncStatus", decoration:"flat", width:2, height: 2) {
+			state "syncStatus", label:'${currentValue}'
+		}
+// Relay 1
+		valueTile("relay1Name", "device.relay1Name", decoration:"flat", width:5, height: 1) {
+			state "default", label:'${currentValue}'
+		}
+		standardTile("relay1Switch", "device.relay1Switch", width:1, height: 1) {
+			state "on", label:'ON', action:"relay1Off", backgroundColor: "#00a0dc"
+			state "off", label:'OFF', action:"relay1On"
+		}
+// Relay 2
+		valueTile("relay2Name", "device.relay2Name", decoration:"flat", width:5, height: 1) {
+			state "default", label:'${currentValue}'
+		}
+		standardTile("relay2Switch", "device.relay2Switch", width:1, height: 1) {
+			state "on", label:'ON', action:"relay2Off", backgroundColor: "#00a0dc"
+			state "off", label:'OFF', action:"relay2On"
+		}
+// Relay 3
+		valueTile("relay3Name", "device.relay3Name", decoration:"flat", width:5, height: 1) {
+			state "default", label:'${currentValue}'
+		}
+		standardTile("relay3Switch", "device.relay3Switch", width:1, height: 1) {
+			state "on", label:'ON', action:"relay3Off", backgroundColor: "#00a0dc"
+			state "off", label:'OFF', action:"relay3On"
+		}
+// Relay 4       
+        valueTile("relay4Name", "device.relay4Name", decoration:"flat", width:5, height: 1) {
+			state "default", label:'${currentValue}'
+		}
+		standardTile("relay4Switch", "device.relay4Switch", width:1, height: 1) {
+			state "on", label:'ON', action:"relay4Off", backgroundColor: "#00a0dc"
+			state "off", label:'OFF', action:"relay4On"
+		}
+// Relay 5
+		valueTile("relay5Name", "device.relay5Name", decoration:"flat", width:5, height: 1) {
+			state "default", label:'${currentValue}'
+		}
+		standardTile("relay5Switch", "device.relay5Switch", width:1, height: 1) {
+			state "on", label:'ON', action:"relay5Off", backgroundColor: "#00a0dc"
+			state "off", label:'OFF', action:"relay5On"
+		}
+// Relay 6
+		valueTile("relay6Name", "device.relay6Name", decoration:"flat", width:5, height: 1) {
+			state "default", label:'${currentValue}'
+		}
+		standardTile("relay6Switch", "device.relay6Switch", width:1, height: 1) {
+			state "on", label:'ON', action:"relay6Off", backgroundColor: "#00a0dc"
+			state "off", label:'OFF', action:"relay6On"
+		}
+// Relay 7        
+        valueTile("relay7Name", "device.relay7Name", decoration:"flat", width:5, height: 1) {
+			state "default", label:'${currentValue}'
+		}
+		standardTile("relay7Switch", "device.relay7Switch", width:1, height: 1) {
+			state "on", label:'ON', action:"relay7Off", backgroundColor: "#00a0dc"
+			state "off", label:'OFF', action:"relay7On"
+		}
+// Relay 8
+		valueTile("relay8Name", "device.relay8Name", decoration:"flat", width:5, height: 1) {
+			state "default", label:'${currentValue}'
+		}
+        standardTile("relay8Switch", "device.relay8Switch", width:1, height: 1) {
+			state "on", label:'ON', action:"relay8Off", backgroundColor: "#00a0dc"
+			state "off", label:'OFF', action:"relay8On"
+		}
+
+		main (["switch"])
+		details(["switch", "refresh", "syncStatus", "configure",
+        "relay1Name", "relay1Switch", "relay2Name", "relay2Switch", "relay3Name", "relay3Switch", 
+        "relay4Name", "relay4Switch", "relay5Name", "relay5Switch", "relay6Name", "relay6Switch", 
+        "relay7Name", "relay7Switch", "relay8Name", "relay8Switch",
+        "firmwareVersion"])
+	}
+
+//
+	preferences {
+		configParams.each {
+			getOptionsInput(it)
+		}
+		
+		input "debugLogging", "enum",
+			title: "Logging:",
+			required: false,
+			defaultValue: "1",
+			options: ["0":"Disabled", "1":"Enabled [DEFAULT]"]					
+	}
+}
+
+
+private getOptionsInput(param) {
+	if (param.options) {
+		input "configParam${param.num}", "enum",
+			title: "${param.name}:",
+			required: false,
+			defaultValue: param.value?.toString(),
+			displayDuringSetup: true,
+			options: param.options
+	}
+	else if (param.range) {
+		input "configParam${param.num}", "number",
+			title: "${param.name}:",
+			required: false,
+			defaultValue: param.value?.toString(),
+			displayDuringSetup: true,
+			range: param.range
+	}
+}
+
+
+def installed () {
+	initialize()
+}
+
+def updated() {
+	if (!isDuplicateCommand(state.lastUpdated, 3000)) {
+		state.lastUpdated = new Date().time
+
+		initialize()
+
+		refreshChildSwitches()
+
+		executeConfigureCmds()
+	}
+}
+
+private initialize() {
+	if (!device.currentValue("switch")) {
+		sendEvent(name: "switch", value: "off", displayed: false)
+	}
+
+	(1..8).each {
+		if (!device.currentValue("relay${it}Switch")) {
+			sendEvent(name: "relay${it}Switch", value: "off", displayed: false)
+			sendEvent(name: "relay${it}Name", value: "Relay ${it}", displayed: false)
+		}
+	}
+
+	if (!device.currentValue("checkInterval")) {
+		def checkInterval = (6 * 60 * 60) + (5 * 60)
+		sendEvent(name: "checkInterval", value: checkInterval, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
+	}
+
+	unschedule()
+
+	runEvery3Hours(ping)
+}
+
+private refreshChildSwitches() {
+	(1..8).each {
+		def childEnabled = true // settings ? settings["createRelay${it}"] : true
+		def child = findChildByEndpoint(it)
+		if (child && !childEnabled) {
+			log.warn "Removing ${child.displayName}} "
+			deleteChildDevice(child.deviceNetworkId)
+			child = null
+		}
+		else if (!child && childEnabled) {
+			child = addChildSwitch(it)
+			child?.sendEvent(getEventMap("switch", device.currentValue("relay${it}Switch"), false))
+		}
+
+		def relayName = child ? child.displayName : "Relay ${it}"
+		if (relayName != device.currentValue("relay${it}Name")) {
+			sendEvent(getEventMap("relay${it}Name", relayName, false))
+		}
+	}
+}
+
+private addChildSwitch(endpoint) {
+	def name = "Relay ${endpoint}"
+
+	logDebug "Creating Child Switch for ${name}"
+	
+	return addChildDevice(
+		"smartthings",
+		"Child Switch",
+		"${device.deviceNetworkId}:${endpoint}",
+		null,
+		[
+			completedSetup: true,
+			label: "${device.displayName}-${name}",
+			isComponent: false,
+			data: [endpoint: "${endpoint}"]
+		]
+	)
+}
+
+
+def configure() {
+	logDebug "configure()..."
+
+	if (state.resyncAll == null) {
+		state.resyncAll = true
+
+		runIn(-4, refresh)
+		runIn(8, executeConfigureCmds)
+	}
+	else {
+		if (!pendingChanges) {
+			state.resyncAll = true
+		}
+		executeConfigureCmds()
+	}
+}
+
+def executeConfigureCmds() {	
+	runIn(6, updateSyncStatus)
+	
+	def cmds = []
+
+	if (state.resyncAll || !device.currentValue("firmwareVersion")) {
+		cmds << versionGetCmd()
+	}
+
+	configParams.each {
+		if (isParamSupported(it)) {
+			def storedVal = getParamStoredValue(it.num)
+			if (state.resyncAll || "${storedVal}" != "${it.value}") {
+				if (state.configured) {
+					logDebug "CHANGING ${it.name}(#${it.num}) from ${storedVal} to ${it.value}"
+					cmds << configSetCmd(it)
+				}
+				cmds << configGetCmd(it)
+			}
+		}
+	}
+
+	if (cmds) {
+		sendCommands(delayBetween(cmds, 250))
+	}
+}
+
+
+def ping() {
+	logDebug "ping()..."
+	return sendCommands([ versionGetCmd() ])
+}
+
+
+def on() {
+	logDebug "on()..."
+	return [ switchBinarySetCmd(0xFF) ]
+}
+
+
+def off() {
+	logDebug "off()..."
+	return [ switchBinarySetCmd(0x00) ]
+}
+
+// On functions
+def relay1On() { relayOn(1) }
+def relay2On() { relayOn(2) }
+def relay3On() { relayOn(3) }
+def relay4On() { relayOn(4) }
+def relay5On() { relayOn(5) }
+def relay6On() { relayOn(6) }
+def relay7On() { relayOn(7) }
+def relay8On() { relayOn(8) }
+
+
+private relayOn(endpoint) {
+	logDebug "relay${endpoint}On()..."
+	executeChildOnOff(0xFF, endpoint)
+}
+
+// note: dni = Device Network ID of the device
+def childOn(dni) {
+	logDebug "childOn(${dni})..."
+	executeChildOnOff(0xFF, getChildEndpoint(findChildByDNI(dni)))
+}
+
+// Off functions
+def relay1Off() { relayOff(1) }
+def relay2Off() { relayOff(2) }
+def relay3Off() { relayOff(3) }
+def relay4Off() { relayOff(4) }
+def relay5Off() { relayOff(5) }
+def relay6Off() { relayOff(6) }
+def relay7Off() { relayOff(7) }
+def relay8Off() { relayOff(8) }
+
+private relayOff(endpoint) {
+	logDebug "relay${endpoint}Off()..."
+	executeChildOnOff(0x00, endpoint)
+}
+
+def childOff(dni) {
+	logDebug "childOff(${dni})..."
+	executeChildOnOff(0x00, getChildEndpoint(findChildByDNI(dni)))
+}
+
+// Listen to Relay switches buttoms and execute On/Off Z-wave commands for a relay    
+void executeChildOnOff(value, endpoint) {
+	sendCommands([ switchBinarySetCmd(value, endpoint) ])
+}
+
+// Refresh
+def refresh() {
+	logDebug "refresh()..."
+
+	refreshChildSwitches()
+
+	def cmds = []
+	(0..8).each {
+		cmds << basicGetCmd(it)
+	}
+	sendCommands(delayBetween(cmds, 250))
+	return []
+}
+
+private sendCommands(cmds) {
+	def actions = []
+	cmds?.each {
+		actions << new physicalgraph.device.HubAction(it)
+	}
+	sendHubCommand(actions)
+	return []
+}
+
+
+private versionGetCmd() {
+	return secureCmd(zwave.versionV1.versionGet())
+}
+
+private basicGetCmd(endpoint=null) {
+	return multiChannelCmdEncapCmd(zwave.basicV1.basicGet(), endpoint)
+}
+
+private switchBinaryGetCmd(endpoint=null) {
+	return multiChannelCmdEncapCmd(zwave.switchBinaryV1.switchBinaryGet(), endpoint)
+}
+
+private switchBinarySetCmd(val, endpoint=null) {
+	return multiChannelCmdEncapCmd(zwave.switchBinaryV1.switchBinarySet(switchValue: val), endpoint)
+}
+
+private configSetCmd(param) {
+	return secureCmd(zwave.configurationV2.configurationSet(parameterNumber: param.num, size: param.size, scaledConfigurationValue: param.value))
+}
+
+private configGetCmd(param) {
+	return secureCmd(zwave.configurationV2.configurationGet(parameterNumber: param.num))
+}
+
+private multiChannelCmdEncapCmd(cmd, endpoint) {
+	if (endpoint) {
+		return secureCmd(zwave.multiChannelV3.multiChannelCmdEncap(destinationEndPoint:safeToInt(endpoint)).encapsulate(cmd))
+	}
+	else {
+		return secureCmd(cmd)
+	}
+}
+
+private secureCmd(cmd) {
+	if (zwaveInfo?.zw?.contains("s") || ("0x98" in device.rawDescription?.split(" "))) {
+		return zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
+	}
+	else {
+		return cmd.format()
+	}
+}
+
+
+def parse(String description) {
+	def result = []
+	try {
+		if (!"${description}".contains("command: 5E02")) {
+			def cmd = zwave.parse(description, commandClassVersions)
+			if (cmd) {
+				result += zwaveEvent(cmd)
+			}
+			else {
+				log.warn "Unable to parse: $description"
+			}
+		}
+
+		if (!isDuplicateCommand(state.lastCheckInTime, 60000)) {
+			state.lastCheckInTime = new Date().time
+			sendEvent(getEventMap("lastCheckIn", convertToLocalTimeString(new Date()), false))
+		}
+	}
+	catch (e) {
+		log.error "${e}"
+	}
+	return result
+}
+
+
+def zwaveEvent(physicalgraph.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
+	def encapsulatedCmd = cmd.encapsulatedCommand(commandClassVersions)
+
+	def result = []
+	if (encapsulatedCmd) {
+		result += zwaveEvent(encapsulatedCmd)
+	}
+	else {
+		log.warn "Unable to extract encapsulated cmd from $cmd"
+	}
+	return result
+}
+
+
+def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
+	// Workaround that was added to all SmartThings Multichannel DTHs.
+	if (cmd.commandClass == 0x6C && cmd.parameter.size >= 4) { // Supervision encapsulated Message
+		// Supervision header is 4 bytes long, two bytes dropped here are the latter two bytes of the supervision header
+		cmd.parameter = cmd.parameter.drop(2)
+		// Updated Command Class/Command now with the remaining bytes
+		cmd.commandClass = cmd.parameter[0]
+		cmd.command = cmd.parameter[1]
+		cmd.parameter = cmd.parameter.drop(2)
+	}
+	
+	def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions)
+
+	if (encapsulatedCommand) {
+		return zwaveEvent(encapsulatedCommand, cmd.sourceEndPoint)
+	}
+	else {
+		logDebug "Unable to get encapsulated command: $cmd"
+		return []
+	}
+}
+
+
+def zwaveEvent(physicalgraph.zwave.commands.versionv1.VersionReport cmd) {
+	logTrace "VersionReport: ${cmd}"
+
+	def subVersion = String.format("%02d", cmd.applicationSubVersion)
+	def fullVersion = "${cmd.applicationVersion}.${subVersion}"
+
+	if (fullVersion != device.currentValue("firmwareVersion")) {
+		sendEvent(getEventMap("firmwareVersion", fullVersion))
+	}
+	return []
+}
+
+
+def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport cmd) {
+	state.configured = true
+
+	updateSyncStatus("Syncing...")
+	runIn(10, updateSyncStatus)
+
+	def param = configParams.find { it.num == cmd.parameterNumber }
+	if (param) {
+		logDebug "${param.name}(#${param.num}) = ${cmd.scaledConfigurationValue}"
+		setParamStoredValue(param.num, cmd.scaledConfigurationValue)
+	}
+	else {
+		logDebug "Unknown Parameter #${cmd.parameterNumber} = ${cmd.scaledConfigurationValue}"
+	}
+	state.resyncAll = false
+	return []
+}
+
+def updateSyncStatus(status=null) {
+	if (status == null) {
+		def changes = getPendingChanges()
+		if (changes > 0) {
+			status = "${changes} Pending Change" + ((changes > 1) ? "s" : "")
+		}
+		else {
+			status = "Synced"
+		}
+	}
+	if (device.currentValue("syncStatus") != status) {
+		sendEvent(getEventMap("syncStatus", status, false))
+	}
+}
+
+private getPendingChanges() {
+	return (configParams.count { isConfigParamSynced(it) ? 0 : 1 })
+}
+
+private isConfigParamSynced(param) {
+	return (!isParamSupported(param) || param.value == getParamStoredValue(param.num))
+}
+
+private isParamSupported(param) {
+	return (!param.firmware || param.firmware <= firmwareVersion)
+}
+
+private getParamStoredValue(paramNum) {
+	return safeToInt(state["configVal${paramNum}"], null)
+}
+
+private setParamStoredValue(paramNum, value) {
+	state["configVal${paramNum}"] = value
+}
+
+
+def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, endpoint=0) {
+	logDebug "SwitchBinaryReport: ${cmd}" + (endpoint ? " (Endpoint ${endpoint})" : "")
+	
+	handleSwitchReport(cmd.value, endpoint)	
+	return []
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd, endpoint=0) {
+	logTrace "BasicReport: ${cmd}" + (endpoint ? " (Endpoint ${endpoint})" : "")
+	
+	handleSwitchReport(cmd.value, endpoint)	
+	return []
+}
+
+private handleSwitchReport(rawValue, endpoint) {
+	def value = (rawValue == 0xFF) ? "on" : "off"
+
+	if (endpoint) {
+		def child = findChildByEndpoint(endpoint)
+		if (child) {
+			def desc = "${child.displayName}: switch is ${value}"
+			logDebug "${desc}"
+			child.sendEvent(name: "switch", value: value, descriptionText: desc)
+		}
+
+		sendEvent(getEventMap("relay${endpoint}Switch", value, !child))
+	}
+	else {
+		sendEvent(getEventMap("switch", value))
+	}	
+}
+
+
+def zwaveEvent(physicalgraph.zwave.Command cmd, endpoint=null) {
+	logDebug "Unhandled zwaveEvent: $cmd" + (endpoint ? " (Endpoint ${endpoint})" : "")
+	return []
+}
+
+
+// Configuration Parameters
+private getConfigParams() {
+	return [
+		powerFailureRecoveryParam,
+		relay1TypeParam,
+		relay2TypeParam,
+		relay3TypeParam,
+        relay4TypeParam,
+		relay5TypeParam,
+		relay6TypeParam,
+        relay7TypeParam,
+		relay8TypeParam,
+//		not need ledIndicatorModeParam,
+		relay1AutoOffParam,
+		relay1AutoOffUnitParam,
+		relay1AutoOnParam,
+		relay1AutoOnUnitParam,
+		relay2AutoOffParam,
+		relay2AutoOffUnitParam,
+		relay2AutoOnParam,
+		relay2AutoOnUnitParam,
+		relay3AutoOffParam,
+		relay3AutoOffUnitParam,
+		relay3AutoOnParam,
+		relay3AutoOnUnitParam,
+        relay4AutoOffParam,
+		relay4AutoOffUnitParam,
+		relay4AutoOnParam,
+		relay4AutoOnUnitParam,
+		relay5AutoOffParam,
+		relay5AutoOffUnitParam,
+		relay5AutoOnParam,
+		relay5AutoOnUnitParam,
+		relay6AutoOffParam,
+		relay6AutoOffUnitParam,
+		relay6AutoOnParam,
+		relay6AutoOnUnitParam,
+        relay7AutoOffParam,
+		relay7AutoOffUnitParam,
+		relay7AutoOnParam,
+		relay7AutoOnUnitParam,
+		relay8AutoOffParam,
+		relay8AutoOffUnitParam,
+		relay8AutoOnParam,
+		relay8AutoOnUnitParam,
+		relay1ManualControlParam,
+		relay2ManualControlParam,
+		relay3ManualControlParam,
+        relay4ManualControlParam,
+		relay5ManualControlParam,
+		relay6ManualControlParam,
+        relay7ManualControlParam,
+		relay8ManualControlParam,
+		relay1BehaviorParam,
+		relay2BehaviorParam,
+		relay3BehaviorParam,
+        relay4BehaviorParam,
+		relay5BehaviorParam,
+		relay6BehaviorParam,
+        relay7BehaviorParam,
+		relay8BehaviorParam,
+		dcMotorModeParam
+	]
+}
+
+private getPowerFailureRecoveryParam() {
+	def options = [
+		0:"Turn All Relays Off",
+		1:"Restore Relay States From Before Power Failure",
+		2:"Turn All Relays On",
+		3:"Restore Relay 1 and Relay 2 States and Turn Relay 3 Off",
+		4:"Restore Relay 1 and Relay 2 States and Turn Relay 3 On"
+	]
+	return getParam(1, "On/Off Status Recovery After Power Failure", 1, 1, options)
+}
+
+private getRelay1TypeParam() {
+	return getRelayTypeParam(2, 1)
+}
+private getRelay2TypeParam() {
+	return getRelayTypeParam(3, 2)
+}
+private getRelay3TypeParam() {
+	return getRelayTypeParam(4, 3)
+}
+private getRelay4TypeParam() {
+	return getRelayTypeParam(5, 4)
+}
+private getRelay5TypeParam() {
+	return getRelayTypeParam(6, 5)
+}
+private getRelay6TypeParam() {
+	return getRelayTypeParam(7, 6)
+}
+private getRelay7TypeParam() {
+	return getRelayTypeParam(8, 7)
+}
+private getRelay8TypeParam() {
+	return getRelayTypeParam(9, 8)
+}
+
+private getRelayTypeParam(num, relay) {
+	def options = [
+		0:"Momentary Switch",
+		1:"Toggle Switch",
+		2:"Toggle Switch (any change)",
+		3:"Garage Door (FIRMWARE >= 1.02)"
+	]
+	return getParam(num, "Switch Type for Relay ${relay}", 1, 2, options)
+}
+/**
+private getLedIndicatorModeParam() {
+	def options = [
+		0:"On when ALL Relays are Off", 
+		1:"On when ANY Relay is On",
+		2:"Always Off",
+		3:"Always On"
+	]
+	return getParam(5, "LED Indicator Control", 1, 0, options)
+}
+*/
+
+private getRelay1AutoOffParam() {
+	return getAutoOnOffParam(10, "Off", 1)
+}
+private getRelay1AutoOnParam() {
+	return getAutoOnOffParam(11, "On", 1)
+}
+private getRelay2AutoOffParam() {
+	return getAutoOnOffParam(12, "Off", 2)
+}
+private getRelay2AutoOnParam() {
+	return getAutoOnOffParam(13, "On", 2)
+}
+private getRelay3AutoOffParam() {
+	return getAutoOnOffParam(14, "Off", 3)
+}
+private getRelay3AutoOnParam() {
+	return getAutoOnOffParam(15, "On", 3)
+}
+private getRelay4AutoOffParam() {
+	return getAutoOnOffParam(16, "Off", 4)
+}
+private getRelay4AutoOnParam() {
+	return getAutoOnOffParam(17, "On", 4)
+}
+private getRelay5AutoOffParam() {
+	return getAutoOnOffParam(18, "Off", 5)
+}
+private getRelay5AutoOnParam() {
+	return getAutoOnOffParam(19, "On", 5)
+}
+private getRelay6AutoOffParam() {
+	return getAutoOnOffParam(20, "Off", 6)
+}
+private getRelay6AutoOnParam() {
+	return getAutoOnOffParam(21, "On", 6)
+}
+private getRelay7AutoOffParam() {
+	return getAutoOnOffParam(22, "Off", 7)
+}
+private getRelay7AutoOnParam() {
+	return getAutoOnOffParam(23, "On", 7)
+}
+private getRelay8AutoOffParam() {
+	return getAutoOnOffParam(24, "Off", 8)
+}
+private getRelay8AutoOnParam() {
+	return getAutoOnOffParam(25, "On", 8)
+}
+
+private getAutoOnOffParam(num, onOff, relay) {
+	return getParam(num, "Auto Turn-${onOff} Timer for Relay ${relay} (0=Disabled, 1-65535)", 4, 0, null, "0..65535")
+}
+
+// 
+
+private getRelay1ManualControlParam() {
+	return getRelayManualControlParam(26, 1)
+}
+private getRelay2ManualControlParam() {
+	return getRelayManualControlParam(27, 2)
+}
+private getRelay3ManualControlParam() {
+	return getRelayManualControlParam(28, 3)
+}
+private getRelay4ManualControlParam() {
+	return getRelayManualControlParam(29, 4)
+}
+private getRelay5ManualControlParam() {
+	return getRelayManualControlParam(30, 5)
+}
+private getRelay6ManualControlParam() {
+	return getRelayManualControlParam(31, 6)
+}
+private getRelay7ManualControlParam() {
+	return getRelayManualControlParam(32, 7)
+}
+private getRelay8ManualControlParam() {
+	return getRelayManualControlParam(33, 8)
+}
+
+private getRelayManualControlParam(num, relay) {
+	def options = [
+		0:"Disabled", 
+		1:"Enabled", 
+		2:"Disabled with On/Off Reporting (FIRMWARE >= 1.02)"
+	]
+	return getParam(num, "Manual Control for Relay ${relay}", 1, 1, options)
+}
+//
+
+private getRelay1AutoOffUnitParam() {
+	return getAutoOnOffUnitParam(34, "Off", 1)
+}
+private getRelay1AutoOnUnitParam() {
+	return getAutoOnOffUnitParam(35, "On", 1)
+}
+private getRelay2AutoOffUnitParam() {
+	return getAutoOnOffUnitParam(36, "Off", 2)
+}
+private getRelay2AutoOnUnitParam() {
+	return getAutoOnOffUnitParam(37, "On", 2)
+}
+private getRelay3AutoOffUnitParam() {
+	return getAutoOnOffUnitParam(38, "Off", 3)
+}
+private getRelay3AutoOnUnitParam() {
+	return getAutoOnOffUnitParam(39, "On", 3)
+}
+private getRelay4AutoOffUnitParam() {
+	return getAutoOnOffUnitParam(40, "Off", 4)
+}
+private getRelay4AutoOnUnitParam() {
+	return getAutoOnOffUnitParam(41, "On", 4)
+}
+private getRelay5AutoOffUnitParam() {
+	return getAutoOnOffUnitParam(42, "Off", 5)
+}
+private getRelay5AutoOnUnitParam() {
+	return getAutoOnOffUnitParam(43, "On", 5)
+}
+private getRelay6AutoOffUnitParam() {
+	return getAutoOnOffUnitParam(44, "Off", 6)
+}
+private getRelay6AutoOnUnitParam() {
+	return getAutoOnOffUnitParam(45, "On", 6)
+}
+private getRelay7AutoOffUnitParam() {
+	return getAutoOnOffUnitParam(46, "Off", 7)
+}
+private getRelay7AutoOnUnitParam() {
+	return getAutoOnOffUnitParam(47, "On", 7)
+}
+private getRelay8AutoOffUnitParam() {
+	return getAutoOnOffUnitParam(48, "Off", 8)
+}
+private getRelay8AutoOnUnitParam() {
+	return getAutoOnOffUnitParam(49, "On", 8)
+}
+
+private getAutoOnOffUnitParam(num, onOff, relay) {
+	def options = [
+		0:"Minutes",
+		1:"Seconds (FIRMWARE >= 1.01)",
+		2:"Hours (FIRMWARE >= 1.01)"
+	]
+	return getParam(num, "Auto Turn-${onOff} Timer Unit for Relay ${relay}", 1, 0, options, null, 1.01)
+}
+//
+
+private getRelay1BehaviorParam() {
+	return getRelayBehaviorParam(50, 1)
+}
+private getRelay2BehaviorParam() {
+	return getRelayBehaviorParam(51, 2)
+}
+private getRelay3BehaviorParam() {
+	return getRelayBehaviorParam(52, 3)
+}
+private getRelay4BehaviorParam() {
+	return getRelayBehaviorParam(53, 4)
+}
+private getRelay5BehaviorParam() {
+	return getRelayBehaviorParam(54, 5)
+}
+private getRelay6BehaviorParam() {
+	return getRelayBehaviorParam(55, 6)
+}
+private getRelay7BehaviorParam() {
+	return getRelayBehaviorParam(56, 7)
+}
+private getRelay8BehaviorParam() {
+	return getRelayBehaviorParam(57, 8)
+}
+
+private getRelayBehaviorParam(num, relay) {
+	def options = [
+		0:"NO (reports on when switch on)",
+		1:"NC (reports on when switch off)",
+		2:"NC (reports on when switch on)"
+	]
+	return getParam(num, "Relay ${relay} Behavior (FIRMWARE >= 1.03)", 1, 0, options, null, 1.03)
+}
+//
+
+private getDcMotorModeParam() {
+	return getParam(58, "DC Motor Mode (FIRMWARE >= 1.03)", 1, 0, [0:"Disabled", 1:"Enabled"], null, 1.03)
+}
+//////////////////////
+
+private getParam(num, name, size, defaultVal, options=null, range=null, firmware=null) {
+	def val = safeToInt((settings ? settings["configParam${num}"] : null), defaultVal)
+
+	def map = [num: num, name: name, size: size, value: val]
+	if (options) {
+		map.options = setDefaultOption(options, defaultVal)
+	}
+
+	if (range) map.range = range
+
+	if (firmware) map.firmware = firmware
+
+	return map
+}
+
+private setDefaultOption(options, defaultVal) {	
+	options?.each {
+		if (it.key == defaultVal) {
+			it.value = "${it.value} [DEFAULT]"
+		}
+	}	
+	return options
+}
+
+
+private getEventMap(name, value, displayed=true) {
+	def desc = "${device.displayName}: ${name} is ${value}"
+
+	def eventMap = [
+		name: name,
+		value: value,
+		displayed: displayed,
+		descriptionText: "${desc}"
+	]
+
+	if (displayed) {
+		logDebug "${desc}"
+	}
+	else {
+		logTrace "${desc}"
+	}
+	return eventMap
+}
+
+
+private getFirmwareVersion() {
+	return safeToDec(device.currentValue("firmwareVersion"))
+}
+
+private findChildByEndpoint(endpoint) {
+	return childDevices?.find { getChildEndpoint(it) == endpoint }
+}
+
+private findChildByDNI(dni) {
+	return childDevices?.find { it.deviceNetworkId == dni }
+}
+
+private getChildEndpoint(child) {
+	return child ? safeToInt(child.getDataValue("endpoint")) : 0
+}
+
+
+private safeToInt(val, defaultVal=0) {
+	if ("${val}"?.isInteger()) {
+		return "${val}".toInteger()
+	}
+	else if ("${val}".isDouble()) {
+		return "${val}".toDouble()?.round()
+	}
+	else {
+		return  defaultVal
+	}
+}
+
+private safeToDec(val, defaultVal=0) {
+	return "${val}"?.isBigDecimal() ? "${val}".toBigDecimal() : defaultVal
+}
+
+private convertToLocalTimeString(dt) {
+	def timeZoneId = location?.timeZone?.ID
+	if (timeZoneId) {
+		return dt.format("MM/dd/yyyy hh:mm:ss a", TimeZone.getTimeZone(timeZoneId))
+	}
+	else {
+		return "$dt"
+	}
+}
+
+private isDuplicateCommand(lastExecuted, allowedMil) {
+	!lastExecuted ? false : (lastExecuted + allowedMil > new Date().time)
+}
+
+void logDebug(msg) {
+	if (safeToInt(settings?.debugLogging, 1)) {
+		log.debug "$msg"
+	}
+}
+
+private logTrace(msg) {
+	// log.trace "$msg"
+}
